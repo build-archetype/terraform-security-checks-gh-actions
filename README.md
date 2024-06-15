@@ -1,4 +1,4 @@
-# Security Checks with GitHub Actions
+# Terraform Security Checks for AWS with GitHub Actions
 
 This repository includes a GitHub Actions workflow to run security checks using Bandit, Terrascan, Checkov, and Snyk. The workflow is triggered on each push and pull request to ensure continuous security monitoring of the codebase.
 
