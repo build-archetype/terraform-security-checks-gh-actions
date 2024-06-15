@@ -1,0 +1,80 @@
+name: Security Checks
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r .
+
+      - name: Install Terrascan
+        run: |
+          curl -L -o terrascan.tar.gz https://github.com/accurics/terrascan/releases/latest/download/terrascan_Linux_x86_64.tar.gz
+          tar -xvf terrascan.tar.gz terrascan
+          sudo mv terrascan /usr/local/bin/
+
+      - name: Run Terrascan
+        run: terrascan scan -t aws -d .
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov
+        run: checkov -d .
+
+      - name: Install Snyk
+        uses: snyk/actions/setup@v1.1.0
+        with:
+          version: 'v1.506.0'
+
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+      - name: Test with Snyk
+        run: snyk test
+
+      - name: Check for HTTP requests without timeout
+        run: |
+          grep -r "requests.get" . | grep -v "timeout=" && echo "Found requests without timeout" && exit 1 || echo "All requests have timeouts"
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v3
+        with:
+          name: bandit-report
+          path: bandit.json
+          if-no-files-found: ignore
+
+      - name: Upload Terrascan report
+        uses: actions/upload-artifact@v3
+        with:
+          name: terrascan-report
+          path: terrascan_output.json
+          if-no-files-found: ignore
+
+      - name: Upload Checkov report
+        uses: actions/upload-artifact@v3
+        with:
+          name: checkov-report
+          path: checkov_results.json
+          if-no-files-found: ignore
+
+      - name: Upload Snyk report
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-report
+          path: snyk_report.json
+          if-no-files-found: ignore
